@@ -1,8 +1,16 @@
 # pwbridge-tab
 
+![status](https://img.shields.io/badge/status-alpha-orange) ![platform](https://img.shields.io/badge/platform-Windows-blue) ![shell](https://img.shields.io/badge/shell-PowerShell%207-5391FE) ![license](https://img.shields.io/badge/license-MIT-green)
+
 A PowerShell console that lives in a **browser tab** in Chrome and Comet. The UI runs in your browser; commands execute **locally** on your machine through a small WebSocket bridge. Windows-first alpha. MIT licensed.
 
 > Your shell stays in the browser workspace where you already work, but nothing runs off your machine.
+
+## Screenshot
+
+> Add a screenshot or GIF of the terminal tab here. Save it to `docs/screenshot.png` and it will render below.
+
+![pwbridge-tab terminal in a browser tab](docs/screenshot.png)
 
 ---
 
