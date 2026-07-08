@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>pwbridge-tab</title>
+<style>
+  :root { color-scheme: dark; }
+  body { margin: 0; font-family: Consolas, monospace; background: #0b0f14; color: #d6e2ef; }
+  header { display: flex; gap: 8px; align-items: center; padding: 8px; background: #111823; border-bottom: 1px solid #1e2a38; flex-wrap: wrap; }
+  header input { background: #0b0f14; color: #d6e2ef; border: 1px solid #263241; padding: 6px 8px; border-radius: 4px; }
+  header input#ws { width: 220px; }
+  header button { background: #1f6feb; color: #fff; border: 0; padding: 6px 12px; border-radius: 4px; cursor: pointer; }
+  header button.secondary { background: #30363d; }
+  #status { margin-left: auto; font-size: 13px; }
+  #status.ok { color: #3fb950; }
+  #status.bad { color: #f85149; }
+  #out { padding: 10px; white-space: pre-wrap; height: calc(100vh - 120px); overflow-y: auto; font-size: 13px; line-height: 1.4; }
+  .stderr { color: #f85149; }
+  #inbar { display: flex; padding: 8px; border-top: 1px solid #1e2a38; background: #111823; }
+  #cmd { flex: 1; background: #0b0f14; color: #d6e2ef; border: 1px solid #263241; padding: 8px; border-radius: 4px; }
+</style>
+</head>
+<body>
+<header>
+  <label>WS URL</label>
+  <input id="ws" value="ws://127.0.0.1:8765/" />
+  <label>Token</label>
+  <input id="token" placeholder="(optional)" />
+  <button id="connect">Connect</button>
+  <button id="disconnect" class="secondary">Disconnect</button>
+  <span id="status" class="bad">disconnected</span>
+</header>
+<div id="out"></div>
+<div id="inbar">
+  <input id="cmd" placeholder="PowerShell command (e.g. Get-Process | Select -First 5). Enter to send." autofocus />
+</div>
+<script src="app.js"></script>
+</body>
+</html>
