@@ -12,6 +12,36 @@ function Get-PwBridgeVersion {
     return '0.2.0'
 }
 
+function Split-PwBridgeVersion {
+    <#
+    .SYNOPSIS
+        Splits a SemVer string into the numeric base and its prerelease label.
+
+    .DESCRIPTION
+        Release tags may carry a prerelease suffix (v0.2.0-alpha.2). The base is
+        what Get-PwBridgeVersion declares and what the installer stamps into
+        VersionInfoVersion, which only accepts digits; the full string is what
+        the artifact and the GitHub release are named after.
+
+        Throws on anything that is not major.minor.patch with an optional
+        prerelease and build-metadata suffix.
+    #>
+    param([Parameter(Mandatory = $true)][string]$Version)
+
+    $pattern = '^(?<base>\d+\.\d+\.\d+)(?:-(?<pre>[0-9A-Za-z.-]+))?(?:\+(?<build>[0-9A-Za-z.-]+))?$'
+    if ($Version -notmatch $pattern) {
+        throw "Version '$Version' is not a SemVer string (major.minor.patch with an optional -prerelease)."
+    }
+
+    $prerelease = $Matches['pre']
+    return [pscustomobject]@{
+        Version      = $Version
+        Base         = $Matches['base']
+        Prerelease   = $prerelease
+        IsPrerelease = [bool]$prerelease
+    }
+}
+
 function Get-PwBridgeStateDir {
     <#
     .SYNOPSIS
@@ -199,6 +229,7 @@ function Get-PwBridgePidPath {
 
 Export-ModuleMember -Function @(
     'Get-PwBridgeVersion'
+    'Split-PwBridgeVersion'
     'Get-PwBridgeStateDir'
     'New-PwBridgeToken'
     'Protect-PwBridgeFile'

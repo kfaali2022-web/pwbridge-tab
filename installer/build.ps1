@@ -8,8 +8,14 @@
 
     Output: dist\pwbridge-tab-<version>-setup.exe plus a SHA-256 sidecar.
 
+    -Version takes a SemVer string. A prerelease suffix names the artifact but
+    is stripped for the Windows version resource, which only accepts digits.
+
 .EXAMPLE
     powershell -ExecutionPolicy Bypass -File installer\build.ps1 -Version 0.2.0
+
+.EXAMPLE
+    powershell -ExecutionPolicy Bypass -File installer\build.ps1 -Version 0.2.0-alpha.2
 #>
 [CmdletBinding()]
 param(
@@ -30,8 +36,6 @@ function Resolve-Version {
     if ($Requested) { return $Requested }
     # The module is the single source of truth; the .iss default only exists so
     # the script can be opened in the Inno IDE without a /D switch.
-    $commonModule = Join-Path $repoRoot 'server\modules\PwBridge.Common.psm1'
-    Import-Module $commonModule -Force
     return (Get-PwBridgeVersion)
 }
 
@@ -46,10 +50,9 @@ function Resolve-Iscc {
     return & (Join-Path $PSScriptRoot 'Ensure-InnoSetup.ps1')
 }
 
+Import-Module (Join-Path $repoRoot 'server\modules\PwBridge.Common.psm1') -Force
 $version = Resolve-Version -Requested $Version
-if ($version -notmatch '^\d+\.\d+\.\d+$') {
-    throw "Version '$version' is not in major.minor.patch form."
-}
+$parts = Split-PwBridgeVersion -Version $version
 
 if (-not $SkipValidation) {
     Write-Host 'Running validation...' -ForegroundColor Cyan
@@ -60,12 +63,13 @@ if (-not $SkipValidation) {
 $iscc = Resolve-Iscc -Requested $IsccPath
 Write-Host "Inno Setup:  $iscc"
 Write-Host "Version:     $version"
+if ($parts.IsPrerelease) { Write-Host "Base version: $($parts.Base) (prerelease build)" }
 
 if (-not (Test-Path -LiteralPath $distDir)) {
     New-Item -ItemType Directory -Path $distDir -Force | Out-Null
 }
 
-& $iscc "/DAppVersion=$version" $issPath
+& $iscc "/DAppVersion=$($parts.Base)" "/DAppVersionLabel=$version" $issPath
 if ($LASTEXITCODE -ne 0) { throw "ISCC failed with exit code $LASTEXITCODE." }
 
 $setupPath = Join-Path $distDir "pwbridge-tab-$version-setup.exe"

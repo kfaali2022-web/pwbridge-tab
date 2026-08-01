@@ -72,7 +72,8 @@ That artifact is the easiest way to get a test build without tagging.
 
 `Get-PwBridgeVersion` in `server/modules/PwBridge.Common.psm1` is the single
 source of truth. The `.iss` default and the release workflow both defer to it,
-and a Pester test plus a release-workflow guard fail if they drift.
+and a Pester test plus a release-workflow guard fail if they drift. A prerelease
+tag only has to agree with it on the base version — see below.
 
 To release 0.3.0:
 
@@ -89,6 +90,25 @@ builds, writes `SHA256SUMS.txt` and creates a **draft** GitHub release with the
 EXE attached. Publishing the draft is a manual step — review the artifact first.
 
 `workflow_dispatch` with a `version` input does the same thing without a tag.
+
+### Prereleases
+
+Tags may carry a SemVer prerelease suffix, so an alpha can go out to testers
+without bumping the application version:
+
+```
+git tag v0.2.0-alpha.2 && git push origin v0.2.0-alpha.2
+```
+
+`Split-PwBridgeVersion` splits the tag into a base (`0.2.0`) and a label
+(`alpha.2`). The guard compares `Get-PwBridgeVersion` against the **base**, so
+several alphas can build from one declared version, and the draft release is
+flagged as a prerelease automatically.
+
+The label reaches the artifact name and Add/Remove Programs
+(`pwbridge-tab-0.2.0-alpha.2-setup.exe`), while `VersionInfoVersion` gets the
+numeric base — the Windows version resource rejects anything else. Each alpha
+therefore downloads under its own filename.
 
 ## Reproducibility
 

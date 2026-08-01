@@ -11,6 +11,12 @@
   #define AppVersion "0.2.0"
 #endif
 
+; AppVersion is numeric because the version resource rejects a prerelease
+; suffix. AppVersionLabel is the human-facing string, "0.2.0-alpha.2".
+#ifndef AppVersionLabel
+  #define AppVersionLabel AppVersion
+#endif
+
 #define AppName "pwbridge-tab"
 #define AppPublisher "pwbridge-tab contributors"
 #define AppUrl "https://github.com/kfaali2022-web/pwbridge-tab"
@@ -18,8 +24,8 @@
 [Setup]
 AppId={{7C2B9E14-3A57-4C1E-9E3E-6B1F0D2A8C41}
 AppName={#AppName}
-AppVersion={#AppVersion}
-AppVerName={#AppName} {#AppVersion}
+AppVersion={#AppVersionLabel}
+AppVerName={#AppName} {#AppVersionLabel}
 AppPublisher={#AppPublisher}
 AppPublisherURL={#AppUrl}
 AppSupportURL={#AppUrl}/issues
@@ -36,10 +42,10 @@ AllowNoIcons=yes
 LicenseFile=..\LICENSE
 InfoBeforeFile=WARNING.txt
 OutputDir=..\dist
-OutputBaseFilename={#AppName}-{#AppVersion}-setup
+OutputBaseFilename={#AppName}-{#AppVersionLabel}-setup
 SetupIconFile=assets\pwbridge.ico
 UninstallDisplayIcon={app}\installer\assets\pwbridge.ico
-UninstallDisplayName={#AppName} {#AppVersion}
+UninstallDisplayName={#AppName} {#AppVersionLabel}
 
 ; Per-user install: no UAC prompt, nothing written outside the user profile.
 PrivilegesRequired=lowest

@@ -154,6 +154,12 @@ Describe 'Inno Setup script' {
         $declared = Get-PwBridgeVersion
         $script:Iss | Should -Match ([regex]::Escape("#define AppVersion `"$declared`""))
     }
+
+    It 'keeps the version resource numeric while the filename carries the prerelease label' {
+        $script:Iss | Should -Match '(?m)^VersionInfoVersion=\{#AppVersion\}$'
+        $script:Iss | Should -Match '(?m)^OutputBaseFilename=.*\{#AppVersionLabel\}'
+        $script:Iss | Should -Match '(?m)^\s*#define AppVersionLabel AppVersion$'
+    }
 }
 
 Describe 'Build workflows' {
@@ -210,6 +216,59 @@ Describe 'Inno Setup version gate' {
     It 'uses a compiler whose version cannot be read rather than failing the build' {
         Test-IsccVersion -VersionText $null -Minimum '6.3' | Should -BeTrue
         Test-IsccVersion -VersionText '' -Minimum '6.3' | Should -BeTrue
+    }
+}
+
+Describe 'Split-PwBridgeVersion' {
+    It 'passes a plain release version through' {
+        $parts = Split-PwBridgeVersion -Version '0.2.0'
+        $parts.Base | Should -Be '0.2.0'
+        $parts.IsPrerelease | Should -BeFalse
+        $parts.Prerelease | Should -BeNullOrEmpty
+    }
+
+    It 'splits a prerelease tag into its base and label' {
+        $parts = Split-PwBridgeVersion -Version '0.2.0-alpha.2'
+        $parts.Version | Should -Be '0.2.0-alpha.2'
+        $parts.Base | Should -Be '0.2.0'
+        $parts.Prerelease | Should -Be 'alpha.2'
+        $parts.IsPrerelease | Should -BeTrue
+    }
+
+    It 'accepts the prerelease forms a tag is likely to use' {
+        foreach ($v in @('1.0.0-rc.1', '0.2.0-beta', '0.2.0-alpha.10+build.5')) {
+            (Split-PwBridgeVersion -Version $v).Base | Should -Match '^\d+\.\d+\.\d+$'
+        }
+    }
+
+    It 'rejects anything that is not SemVer' {
+        foreach ($v in @('0.2', 'v0.2.0', '0.2.0.1', '0.2.0-', 'latest', '')) {
+            { Split-PwBridgeVersion -Version $v } | Should -Throw
+        }
+    }
+}
+
+Describe 'Release workflow' {
+    BeforeAll {
+        $script:Release = Get-Content (Join-Path $script:RepoRoot '.github/workflows/release.yml') -Raw
+    }
+
+    It 'validates the tag through Split-PwBridgeVersion instead of its own regex' {
+        $script:Release | Should -Match 'Split-PwBridgeVersion'
+        $script:Release | Should -Not -Match '\^\\d\+\\\.\\d\+\\\.\\d\+\$'
+    }
+
+    It 'compares the declared version against the base, so a prerelease tag builds' {
+        $script:Release | Should -Match '\$parts\.Base'
+    }
+
+    It 'marks a prerelease tag as a prerelease on the draft release' {
+        $script:Release | Should -Match 'prerelease=\$'
+        $script:Release | Should -Match 'prerelease: \$\{\{ steps\.version\.outputs\.prerelease \}\}'
+    }
+
+    It 'still creates the release as a draft' {
+        $script:Release | Should -Match 'draft: true'
     }
 }
 

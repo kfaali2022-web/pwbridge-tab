@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version to build (major.minor.patch)'
+        description: 'Version to build, e.g. 0.2.0 or 0.2.0-alpha.2'
         required: true
 
 permissions:
@@ -27,17 +27,18 @@ jobs:
           if ('${{ github.event_name }}' -eq 'workflow_dispatch') {
             $version = '${{ github.event.inputs.version }}'
           } else {
-            $version = '${{ github.ref_name }}'.TrimStart('v')
-          }
-          if ($version -notmatch '^\d+\.\d+\.\d+$') {
-            throw "Version '$version' is not in major.minor.patch form."
+            $version = '${{ github.ref_name }}' -replace '^v', ''
           }
           Import-Module ./server/modules/PwBridge.Common.psm1 -Force
+          # A prerelease tag (v0.2.0-alpha.2) still has to build the version the
+          # code declares; only the label after the hyphen may differ.
+          $parts = Split-PwBridgeVersion -Version $version
           $declared = Get-PwBridgeVersion
-          if ($declared -ne $version) {
-            throw "Tag version $version does not match Get-PwBridgeVersion ($declared). Bump PwBridge.Common.psm1 first."
+          if ($declared -ne $parts.Base) {
+            throw "Tag base version $($parts.Base) does not match Get-PwBridgeVersion ($declared). Bump PwBridge.Common.psm1 first."
           }
           "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          "prerelease=$($parts.IsPrerelease.ToString().ToLowerInvariant())" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
 
       - name: Install PSScriptAnalyzer and Pester
         shell: pwsh
@@ -79,6 +80,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           draft: true
+          prerelease: ${{ steps.version.outputs.prerelease }}
           tag_name: v${{ steps.version.outputs.version }}
           name: pwbridge-tab ${{ steps.version.outputs.version }}
           body: |
