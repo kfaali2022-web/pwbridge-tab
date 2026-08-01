@@ -1,0 +1,49 @@
+{
+  "$comment": [
+    "Pinned runtime dependencies. They are downloaded on first run rather than",
+    "bundled in the installer: the Android SDK Platform Tools licence does not",
+    "permit redistribution, and downloading keeps the EXE small.",
+    "Every archive is verified against sha256 before it is extracted.",
+    "Run tools/Update-Deps.ps1 to refresh versions and hashes."
+  ],
+  "schemaVersion": 1,
+  "components": [
+    {
+      "id": "scrcpy",
+      "name": "scrcpy",
+      "version": "4.1",
+      "required": true,
+      "url": "https://github.com/Genymobile/scrcpy/releases/download/v4.1/scrcpy-win64-v4.1.zip",
+      "sha256": "5b12172b3264b2889f4583ee64752ce832e29bc8b1089dca81093459697165db",
+      "sizeBytes": 11305298,
+      "archiveRoot": "scrcpy-win64-v4.1",
+      "provides": ["scrcpy.exe", "adb.exe"],
+      "license": "Apache-2.0",
+      "homepage": "https://github.com/Genymobile/scrcpy",
+      "purpose": "Native phone mirroring and control, plus a bundled adb.exe."
+    },
+    {
+      "id": "platform-tools",
+      "name": "Android SDK Platform Tools",
+      "version": "37.0.1",
+      "required": false,
+      "url": "https://dl.google.com/android/repository/platform-tools_r37.0.1-win.zip",
+      "sha256": "45f4d63113e895ebde0c90f194099a4676b6ac653bd28d54314a9e022bbc1a99",
+      "sha1": "e03e78b1d80b396f1c3358e31251cb31740e1110",
+      "sizeBytes": 8044989,
+      "archiveRoot": "platform-tools",
+      "provides": ["adb.exe"],
+      "license": "Android Software Development Kit License Agreement",
+      "licenseUrl": "https://developer.android.com/studio/terms",
+      "homepage": "https://developer.android.com/tools/releases/platform-tools",
+      "purpose": "Fallback source of adb.exe when the scrcpy download is unavailable. Only fetched if adb is still missing.",
+      "redistributable": false
+    }
+  ],
+  "allowedHosts": [
+    "github.com",
+    "objects.githubusercontent.com",
+    "release-assets.githubusercontent.com",
+    "dl.google.com"
+  ]
+}
