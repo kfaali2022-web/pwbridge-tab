@@ -55,8 +55,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Inno Setup
-        run: choco install innosetup --version=6.3.3 --no-progress -y
+      - name: Ensure Inno Setup
+        shell: powershell
+        run: ./installer/Ensure-InnoSetup.ps1 -Install
 
       - name: Build installer
         shell: powershell

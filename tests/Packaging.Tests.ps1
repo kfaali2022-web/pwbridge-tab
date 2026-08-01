@@ -156,6 +156,30 @@ Describe 'Inno Setup script' {
     }
 }
 
+Describe 'Build workflows' {
+    BeforeAll {
+        $script:Workflows = @('.github/workflows/ci.yml', '.github/workflows/release.yml') | ForEach-Object {
+            [pscustomobject]@{
+                Name = $_
+                Text = Get-Content (Join-Path $script:RepoRoot $_) -Raw
+            }
+        }
+    }
+
+    It 'resolves the compiler through Ensure-InnoSetup.ps1' {
+        Test-Path -LiteralPath (Join-Path $script:RepoRoot 'installer/Ensure-InnoSetup.ps1') | Should -BeTrue
+        foreach ($workflow in $script:Workflows) {
+            $workflow.Text | Should -Match 'installer/Ensure-InnoSetup\.ps1 -Install' -Because "$($workflow.Name) must not install Inno Setup by hand"
+        }
+    }
+
+    It 'never pins an Inno Setup version, which would force a downgrade on a newer runner image' {
+        foreach ($workflow in $script:Workflows) {
+            $workflow.Text | Should -Not -Match 'innosetup[^\r\n]*--version' -Because "$($workflow.Name) would fail on a runner that already has a newer Inno Setup"
+        }
+    }
+}
+
 Describe 'Version consistency' {
     It 'uses major.minor.patch' {
         Get-PwBridgeVersion | Should -Match '^\d+\.\d+\.\d+$'

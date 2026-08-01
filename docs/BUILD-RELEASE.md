@@ -33,6 +33,12 @@ dist\pwbridge-tab-<version>-setup.exe.sha256
 it, `-Version 0.3.0` to override the version, or `-IsccPath` if `ISCC.exe` is
 not on `PATH` or in a default location.
 
+The compiler is located by `installer\Ensure-InnoSetup.ps1`, which checks
+`PATH`, the default install directories and the uninstall registry key, and
+accepts anything 6.3 or newer. A local build never installs Inno Setup for you;
+CI runs the same script with `-Install` so it falls back to Chocolatey only when
+the runner image has none.
+
 Compiling the `.iss` directly also works:
 
 ```powershell
@@ -85,8 +91,10 @@ EXE attached. Publishing the draft is a manual step — review the artifact firs
 
 Same commit + same Inno Setup version + same LZMA2 settings gives a
 byte-identical EXE, with the exception of the timestamp Inno embeds in the
-`VersionInfo` resource. Pin the Inno Setup version (CI pins 6.3.3) if you need
-to compare two builds. Publishing `SHA256SUMS.txt` alongside the EXE is what
+`VersionInfo` resource. CI does not pin an exact compiler version — it takes
+whatever the runner image provides, so two builds months apart may differ. To
+compare two builds, build them on one machine, or pass `-IsccPath` to point both
+at the same compiler. Publishing `SHA256SUMS.txt` alongside the EXE is what
 actually lets a tester verify what they downloaded.
 
 ## Code signing

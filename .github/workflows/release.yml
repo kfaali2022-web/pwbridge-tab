@@ -50,8 +50,9 @@ jobs:
         shell: pwsh
         run: ./tests/Invoke-Tests.ps1
 
-      - name: Install Inno Setup
-        run: choco install innosetup --version=6.3.3 --no-progress -y
+      - name: Ensure Inno Setup
+        shell: powershell
+        run: ./installer/Ensure-InnoSetup.ps1 -Install
 
       - name: Build installer
         shell: powershell

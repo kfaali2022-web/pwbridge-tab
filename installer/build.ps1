@@ -41,17 +41,9 @@ function Resolve-Iscc {
         if (-not (Test-Path -LiteralPath $Requested)) { throw "ISCC not found at $Requested" }
         return $Requested
     }
-    $command = Get-Command 'iscc.exe' -ErrorAction SilentlyContinue
-    if ($command) { return $command.Source }
-    $candidates = @(
-        "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe",
-        "$env:ProgramFiles\Inno Setup 6\ISCC.exe",
-        "$env:LOCALAPPDATA\Programs\Inno Setup 6\ISCC.exe"
-    )
-    foreach ($candidate in $candidates) {
-        if ($candidate -and (Test-Path -LiteralPath $candidate)) { return $candidate }
-    }
-    throw 'Inno Setup 6 was not found. Install it from https://jrsoftware.org/isdl.php or pass -IsccPath.'
+    # Never installs anything: a local build should not silently pull in
+    # Chocolatey packages. CI passes -Install to the same script itself.
+    return & (Join-Path $PSScriptRoot 'Ensure-InnoSetup.ps1')
 }
 
 $version = Resolve-Version -Requested $Version
