@@ -156,9 +156,10 @@ Describe 'Inno Setup script' {
     }
 
     It 'keeps the version resource numeric while the filename carries the prerelease label' {
-        $script:Iss | Should -Match '(?m)^VersionInfoVersion=\{#AppVersion\}$'
-        $script:Iss | Should -Match '(?m)^OutputBaseFilename=.*\{#AppVersionLabel\}'
-        $script:Iss | Should -Match '(?m)^\s*#define AppVersionLabel AppVersion$'
+        # \r?$ because a Windows checkout has CRLF line endings.
+        $script:Iss | Should -Match '(?m)^VersionInfoVersion=\{#AppVersion\}\r?$'
+        $script:Iss | Should -Match '(?m)^OutputBaseFilename=.*\{#AppVersionLabel\}-setup\r?$'
+        $script:Iss | Should -Match '(?m)^\s*#define AppVersionLabel AppVersion\r?$'
     }
 }
 
