@@ -35,7 +35,10 @@ not on `PATH` or in a default location.
 
 The compiler is located by `installer\Ensure-InnoSetup.ps1`, which checks
 `PATH`, the default install directories and the uninstall registry key, and
-accepts anything 6.3 or newer. A local build never installs Inno Setup for you;
+accepts anything 6.3 or newer — 6.3 is the floor because the `.iss` uses
+`ArchitecturesAllowed=x64compatible`. The version comes from the compiler's
+start-up banner, since `ISCC.exe` itself reports `0.0.0.0`.
+A local build never installs Inno Setup for you;
 CI runs the same script with `-Install` so it falls back to Chocolatey only when
 the runner image has none.
 

@@ -9,7 +9,10 @@
     already ship a recent one, and pinning an exact version there fails outright:
     Chocolatey refuses to "install" an older version over a newer one.
 
-    -Install falls back to Chocolatey when nothing suitable is present.
+    ISCC.exe carries no usable version resource (it reports 0.0.0.0), so the
+    version comes from the compiler's own start-up banner. When that cannot be
+    read the candidate is used anyway: ISCC rejects directives it does not
+    understand with a clear message of its own, which beats guessing here.
 
 .EXAMPLE
     powershell -ExecutionPolicy Bypass -File installer\Ensure-InnoSetup.ps1 -Install
@@ -46,28 +49,57 @@ function Get-IsccCandidatePath {
     $paths | Where-Object { $_ -and (Test-Path -LiteralPath $_) } | Select-Object -Unique
 }
 
-function Get-IsccVersion {
+function Get-IsccVersionText {
     param([string]$Path)
+
+    # Start-Process rather than the call operator: ISCC exits non-zero when it
+    # only prints its banner, and $LASTEXITCODE is what a CI step exits on.
+    $captured = Join-Path ([System.IO.Path]::GetTempPath()) ([System.IO.Path]::GetRandomFileName())
+    $banner = $null
+    try {
+        Start-Process -FilePath $Path -NoNewWindow -Wait -RedirectStandardOutput $captured
+        $banner = Get-Content -LiteralPath $captured -Raw
+    } catch {
+        $banner = $null
+    } finally {
+        Remove-Item -LiteralPath $captured -Force -ErrorAction SilentlyContinue
+    }
+    if ($banner -and ($banner -match 'Inno Setup\s+(\d+(?:\.\d+)*)')) { return $Matches[1] }
+
     $info = (Get-Item -LiteralPath $Path).VersionInfo
     foreach ($raw in @($info.ProductVersion, $info.FileVersion)) {
-        if ($raw -and ($raw -match '^\s*(\d+(\.\d+){1,3})')) { return [version]$Matches[1] }
+        if ($raw -and ($raw -match '^\s*(\d+(?:\.\d+)+)') -and ($Matches[1] -notmatch '^0(\.0)*$')) {
+            return $Matches[1]
+        }
     }
     return $null
+}
+
+function Test-IsccVersion {
+    param([string]$VersionText, [version]$Minimum)
+
+    # Unknown: use it. A stale compiler fails the build with its own error.
+    if (-not $VersionText) { return $true }
+
+    if ($VersionText -match '\.') { return ([version]$VersionText -ge $Minimum) }
+
+    # The banner sometimes carries only the major version ("Inno Setup 6").
+    return ([int]$VersionText -ge $Minimum.Major)
 }
 
 function Find-Iscc {
     param([version]$Minimum)
     foreach ($path in @(Get-IsccCandidatePath)) {
-        $found = Get-IsccVersion -Path $path
-        if ($null -eq $found) {
-            Write-Host "Using $path (version resource unreadable)."
+        $versionText = Get-IsccVersionText -Path $path
+        if (Test-IsccVersion -VersionText $versionText -Minimum $Minimum) {
+            if ($versionText) {
+                Write-Host "Using Inno Setup $versionText at $path"
+            } else {
+                Write-Host "Using $path (version could not be determined)"
+            }
             return $path
         }
-        if ($found -ge $Minimum) {
-            Write-Host "Using Inno Setup $found at $path"
-            return $path
-        }
-        Write-Host "Skipping Inno Setup $found at $path ($Minimum or newer required)."
+        Write-Host "Skipping Inno Setup $versionText at $path ($Minimum or newer required)."
     }
     return $null
 }
@@ -83,11 +115,10 @@ if (-not $iscc) {
     }
 
     Write-Host 'Installing Inno Setup with Chocolatey...'
-    & choco.exe install innosetup --no-progress -y
-    if ($LASTEXITCODE -ne 0) { throw "choco install innosetup failed with exit code $LASTEXITCODE." }
+    Start-Process -FilePath 'choco.exe' -ArgumentList 'install', 'innosetup', '--no-progress', '-y' -NoNewWindow -Wait
 
     $iscc = Find-Iscc -Minimum $MinimumVersion
-    if (-not $iscc) { throw 'Chocolatey reported success but no suitable ISCC.exe was found.' }
+    if (-not $iscc) { throw 'Chocolatey ran but no suitable ISCC.exe was found afterwards.' }
 }
 
 $iscc

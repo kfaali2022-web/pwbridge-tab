@@ -180,6 +180,39 @@ Describe 'Build workflows' {
     }
 }
 
+Describe 'Inno Setup version gate' {
+    BeforeAll {
+        # The script resolves a compiler when it runs, so lift out just the
+        # comparison and exercise that.
+        $path = Join-Path $script:RepoRoot 'installer/Ensure-InnoSetup.ps1'
+        $ast = [System.Management.Automation.Language.Parser]::ParseFile($path, [ref]$null, [ref]$null)
+        $definition = $ast.Find({
+                param($node)
+                $node -is [System.Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq 'Test-IsccVersion'
+            }, $true)
+        . ([scriptblock]::Create($definition.Extent.Text))
+    }
+
+    It 'accepts a compiler newer than the minimum' {
+        Test-IsccVersion -VersionText '6.7.1' -Minimum '6.3' | Should -BeTrue
+        Test-IsccVersion -VersionText '6.3' -Minimum '6.3' | Should -BeTrue
+    }
+
+    It 'rejects a compiler too old for ArchitecturesAllowed=x64compatible' {
+        Test-IsccVersion -VersionText '6.2.2' -Minimum '6.3' | Should -BeFalse
+        Test-IsccVersion -VersionText '5' -Minimum '6.3' | Should -BeFalse
+    }
+
+    It 'falls back to the major version when the banner carries only that' {
+        Test-IsccVersion -VersionText '6' -Minimum '6.3' | Should -BeTrue
+    }
+
+    It 'uses a compiler whose version cannot be read rather than failing the build' {
+        Test-IsccVersion -VersionText $null -Minimum '6.3' | Should -BeTrue
+        Test-IsccVersion -VersionText '' -Minimum '6.3' | Should -BeTrue
+    }
+}
+
 Describe 'Version consistency' {
     It 'uses major.minor.patch' {
         Get-PwBridgeVersion | Should -Match '^\d+\.\d+\.\d+$'
