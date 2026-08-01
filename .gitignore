@@ -1,0 +1,13 @@
+# Installer output
+dist/
+
+# Local state, should never be committed: it holds the access token
+*.log
+*.pid
+config.json
+
+# Editors and OS
+.vs/
+.vscode/
+Thumbs.db
+desktop.ini

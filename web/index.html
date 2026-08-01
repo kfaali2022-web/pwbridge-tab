@@ -1,40 +1,122 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>pwbridge-tab</title>
-<style>
-  :root { color-scheme: dark; }
-  body { margin: 0; font-family: Consolas, monospace; background: #0b0f14; color: #d6e2ef; }
-  header { display: flex; gap: 8px; align-items: center; padding: 8px; background: #111823; border-bottom: 1px solid #1e2a38; flex-wrap: wrap; }
-  header input { background: #0b0f14; color: #d6e2ef; border: 1px solid #263241; padding: 6px 8px; border-radius: 4px; }
-  header input#ws { width: 220px; }
-  header button { background: #1f6feb; color: #fff; border: 0; padding: 6px 12px; border-radius: 4px; cursor: pointer; }
-  header button.secondary { background: #30363d; }
-  #status { margin-left: auto; font-size: 13px; }
-  #status.ok { color: #3fb950; }
-  #status.bad { color: #f85149; }
-  #out { padding: 10px; white-space: pre-wrap; height: calc(100vh - 120px); overflow-y: auto; font-size: 13px; line-height: 1.4; }
-  .stderr { color: #f85149; }
-  #inbar { display: flex; padding: 8px; border-top: 1px solid #1e2a38; background: #111823; }
-  #cmd { flex: 1; background: #0b0f14; color: #d6e2ef; border: 1px solid #263241; padding: 8px; border-radius: 4px; }
-</style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>pwbridge-tab</title>
+  <link rel="stylesheet" href="styles.css" />
 </head>
+
 <body>
-<header>
-  <label>WS URL</label>
-  <input id="ws" value="ws://127.0.0.1:8765/" />
-  <label>Token</label>
-  <input id="token" placeholder="(optional)" />
-  <button id="connect">Connect</button>
-  <button id="disconnect" class="secondary">Disconnect</button>
-  <span id="status" class="bad">disconnected</span>
-</header>
-<div id="out"></div>
-<div id="inbar">
-  <input id="cmd" placeholder="PowerShell command (e.g. Get-Process | Select -First 5). Enter to send." autofocus />
-</div>
-<script src="app.js"></script>
+  <header id="topbar">
+    <strong class="brand">pwbridge-tab</strong>
+    <nav class="tabs" role="tablist">
+      <button id="tab-terminal" class="tab active" role="tab" aria-selected="true" aria-controls="panel-terminal">PowerShell</button>
+      <button id="tab-phone" class="tab" role="tab" aria-selected="false" aria-controls="panel-phone">Phone</button>
+    </nav>
+    <span id="health" class="pill bad">connecting</span>
+    <button id="btn-diagnostics" class="secondary" type="button">Diagnostics</button>
+    <button id="btn-stop-server" class="danger" type="button">Stop bridge</button>
+  </header>
+
+  <div id="warning" role="alert">
+    <strong>This is a live shell.</strong> Anything you run in the PowerShell tab executes immediately on this PC as
+    your Windows user, with your full permissions. Only run commands you understand.
+    <button id="warning-dismiss" class="link" type="button">Hide</button>
+  </div>
+
+  <main>
+    <section id="panel-terminal" class="panel active" role="tabpanel" aria-labelledby="tab-terminal">
+      <div class="toolbar">
+        <button id="connect" type="button">Connect</button>
+        <button id="disconnect" class="secondary" type="button">Disconnect</button>
+        <button id="clear" class="secondary" type="button">Clear</button>
+        <span id="shell-name" class="muted"></span>
+        <span id="ws-status" class="pill bad">disconnected</span>
+      </div>
+      <div id="out" aria-live="polite"></div>
+      <div class="inbar">
+        <input id="cmd" type="text" autocomplete="off" spellcheck="false"
+          placeholder="PowerShell command. Enter to run, Up/Down for history, Ctrl+C to interrupt." />
+        <button id="send" type="button">Run</button>
+      </div>
+    </section>
+
+    <section id="panel-phone" class="panel" role="tabpanel" aria-labelledby="tab-phone">
+      <div class="toolbar">
+        <button id="phone-refresh" type="button">Check phone</button>
+        <select id="phone-picker" class="hidden" aria-label="Choose a phone"></select>
+        <button id="phone-preview-toggle" class="secondary" type="button">Start preview</button>
+        <button id="phone-scrcpy" class="secondary" type="button">Open in scrcpy</button>
+        <button id="phone-scrcpy-stop" class="secondary hidden" type="button">Close scrcpy</button>
+        <span id="phone-state" class="pill bad">checking</span>
+      </div>
+
+      <div id="phone-message" class="notice"></div>
+
+      <div class="phone-layout">
+        <div class="screen-wrap">
+          <img id="phone-screen" alt="Live view of the connected phone screen" class="hidden" />
+          <div id="phone-placeholder" class="placeholder">
+            <p>No phone preview yet.</p>
+            <p class="muted">Connect your phone by USB, allow the debugging prompt on the phone, then press
+              <em>Check phone</em>.</p>
+          </div>
+          <iframe id="wsscrcpy-frame" class="hidden" title="ws-scrcpy player"></iframe>
+        </div>
+
+        <aside class="controls">
+          <h2>Controls</h2>
+          <div class="btn-grid">
+            <button class="key" data-keycode="KEYCODE_BACK" type="button">Back</button>
+            <button class="key" data-keycode="KEYCODE_HOME" type="button">Home</button>
+            <button class="key" data-keycode="KEYCODE_APP_SWITCH" type="button">Recents</button>
+            <button class="key" data-keycode="KEYCODE_VOLUME_UP" type="button">Vol +</button>
+            <button class="key" data-keycode="KEYCODE_VOLUME_DOWN" type="button">Vol -</button>
+            <button class="key" data-keycode="KEYCODE_POWER" type="button">Power</button>
+            <button class="key" data-keycode="KEYCODE_WAKEUP" type="button">Wake</button>
+            <button class="key" data-keycode="KEYCODE_NOTIFICATION" type="button">Notifications</button>
+            <button class="key" data-keycode="KEYCODE_ENTER" type="button">Enter</button>
+            <button class="key" data-keycode="KEYCODE_DEL" type="button">Backspace</button>
+          </div>
+
+          <label for="phone-text">Type on the phone</label>
+          <div class="inline">
+            <input id="phone-text" type="text" autocomplete="off"
+              placeholder="Letters, digits and _.,:@-+/?!#=" />
+            <button id="phone-text-send" type="button">Send</button>
+          </div>
+
+          <h2>Quality</h2>
+          <label for="phone-fps">Preview rate: <span id="phone-fps-label">3</span> fps</label>
+          <input id="phone-fps" type="range" min="1" max="8" value="3" />
+
+          <div id="wsscrcpy-block" class="hidden">
+            <h2>ws-scrcpy detected</h2>
+            <p class="muted">A ws-scrcpy server is running on port 8000. You can embed it for a higher frame rate.</p>
+            <button id="wsscrcpy-embed" class="secondary" type="button">Embed ws-scrcpy</button>
+            <button id="wsscrcpy-close" class="secondary hidden" type="button">Back to preview</button>
+          </div>
+
+          <h2>Device</h2>
+          <dl id="phone-info" class="info"></dl>
+        </aside>
+      </div>
+    </section>
+  </main>
+
+  <dialog id="logs-dialog">
+    <h2>Recent log</h2>
+    <pre id="logs-body"></pre>
+    <div class="dialog-actions">
+      <button id="logs-download" type="button">Download diagnostics zip</button>
+      <button id="logs-close" class="secondary" type="button">Close</button>
+    </div>
+  </dialog>
+
+  <script src="app.js"></script>
+  <script src="phone.js"></script>
 </body>
+
 </html>

@@ -1,0 +1,40 @@
+Please read this before installing pwbridge-tab.
+
+WHAT THIS PROGRAM DOES
+
+pwbridge-tab opens a page in your web browser that contains two things:
+
+  1. A PowerShell console. This is a REAL, LIVE COMMAND PROMPT on this PC.
+     Anything typed there runs immediately, as you, with all of your
+     permissions. It can read, change and delete your files. Only run
+     commands you understand, or that come from someone you trust.
+
+  2. A phone view. If you plug in an Android phone over USB and approve the
+     "Allow USB debugging?" prompt on the phone, you can see and control the
+     phone from the same browser page.
+
+WHAT IT DOES NOT DO
+
+  - It does not open anything to the internet or to your home network.
+    The bridge listens only on 127.0.0.1 (this PC, loopback) and refuses to
+    start on any other address.
+  - It does not run as administrator. Everything installs into your own user
+    profile.
+  - It does not send your phone screen or your commands anywhere.
+  - It does not start by itself. Nothing runs until you open the shortcut.
+
+ACCESS CONTROL
+
+A unique random access token is generated on this PC the first time you run
+pwbridge-tab. The browser tab must present that token, so a random web page
+cannot reach the shell. Start pwbridge-tab from its shortcut so the token is
+supplied for you.
+
+DOWNLOADS ON FIRST RUN
+
+The first time you start it, pwbridge-tab downloads the Android tools it needs
+(scrcpy, and adb from Google if required). They come from the official
+release servers over HTTPS and each file is checked against a known SHA-256
+before it is used. This is roughly 11 MB.
+
+If you are not comfortable with any of the above, click Cancel now.

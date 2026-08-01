@@ -1,0 +1,73 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    # windows-latest so the scripts are parsed by the same Windows PowerShell
+    # the tester will actually run them under.
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Show shell versions
+        shell: powershell
+        run: |
+          $PSVersionTable | Format-List
+          pwsh -NoProfile -Command '$PSVersionTable.PSVersion.ToString()'
+
+      - name: Install PSScriptAnalyzer and Pester
+        shell: pwsh
+        run: |
+          Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
+          Install-Module PSScriptAnalyzer -MinimumVersion 1.21.0 -Force -Scope CurrentUser
+          Install-Module Pester -MinimumVersion 5.5.0 -Force -Scope CurrentUser -SkipPublisherCheck
+
+      - name: Parse check under Windows PowerShell 5.1
+        shell: powershell
+        run: ./tests/Test-Syntax.ps1
+
+      - name: PSScriptAnalyzer
+        shell: pwsh
+        run: ./tests/Invoke-Lint.ps1
+
+      - name: Pester
+        shell: pwsh
+        run: ./tests/Invoke-Tests.ps1 -SkipLint
+
+      - name: Check web assets
+        shell: pwsh
+        run: |
+          node --check web/app.js
+          node --check web/phone.js
+          node -e "JSON.parse(require('fs').readFileSync('tools/deps.json','utf8'))"
+
+  installer:
+    needs: validate
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Ensure Inno Setup
+        shell: powershell
+        run: ./installer/Ensure-InnoSetup.ps1 -Install
+
+      - name: Build installer
+        shell: powershell
+        run: ./installer/build.ps1 -SkipValidation
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pwbridge-tab-setup
+          path: |
+            dist/*.exe
+            dist/*.sha256
+          if-no-files-found: error
+          retention-days: 14
