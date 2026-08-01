@@ -1,119 +1,141 @@
 # pwbridge-tab
 
-![status](https://img.shields.io/badge/status-alpha-orange) ![platform](https://img.shields.io/badge/platform-Windows-blue) ![shell](https://img.shields.io/badge/shell-PowerShell%207-5391FE) ![license](https://img.shields.io/badge/license-MIT-green)
+![status](https://img.shields.io/badge/status-alpha-orange) ![platform](https://img.shields.io/badge/platform-Windows-blue) ![shell](https://img.shields.io/badge/shell-PowerShell%205.1%20%7C%207-5391FE) ![license](https://img.shields.io/badge/license-MIT-green)
 
-A PowerShell console that lives in a **browser tab** in Chrome and Comet. The UI runs in your browser; commands execute **locally** on your machine through a small WebSocket bridge. Windows-first alpha. MIT licensed.
+A PowerShell console **and an Android phone** in a browser tab. The UI runs in
+your browser; everything executes **locally** through a small loopback bridge.
+Windows-first alpha. MIT licensed.
 
-> Your shell stays in the browser workspace where you already work, but nothing runs off your machine.
-
-## Screenshot
-
-> Add a screenshot or GIF of the terminal tab here. Save it to `docs/screenshot.png` and it will render below.
-
-![pwbridge-tab terminal in a browser tab](docs/screenshot.png)
+> Your shell and your phone stay in the browser workspace where you already
+> work, but nothing runs off your machine.
 
 ---
 
 ## What it is
 
-pwbridge-tab is two small pieces:
+Two tabs on one local page:
 
-1. **A local server** (`server/server.ps1`) that listens on `127.0.0.1:8765`, serves the terminal UI, and bridges a WebSocket connection to a live `pwsh` process.
-2. **A browser tab UI** (`web/`) that connects to that WebSocket, sends commands, and streams stdout/stderr back in real time.
+1. **PowerShell** — a live shell on this PC over a WebSocket to `127.0.0.1:8765`.
+2. **Phone** — an Android device connected over USB, mirrored and controllable
+   from the same page.
 
-Because it is just a loopback web server, it works identically in **Chrome** and **Comet** with no extension to install.
+No browser extension, no cloud, no inbound network exposure.
 
-## Why
+## Install (testers)
 
-- Keep terminal-driven automation inside the same browser you use for everything else.
-- Drive PowerShell from AI/browser workflows without a separate terminal window.
-- Simple, auditable, single-machine tooling.
+Download `pwbridge-tab-<version>-setup.exe` from the
+[releases page](https://github.com/kfaali2022-web/pwbridge-tab/releases) and run
+it. It installs per-user, asks for no administrator password, and creates
+desktop and Start Menu shortcuts.
 
-## Requirements
+**You do not need Git, Node.js, PowerShell 7, or a command prompt.**
 
-- Windows 10/11
-- PowerShell 7 (`pwsh`) — install with `winget install --id Microsoft.PowerShell`
+Step-by-step with screenshots of what to expect (including the SmartScreen
+warning): **[docs/TESTER-GUIDE.md](docs/TESTER-GUIDE.md)**.
 
-## Quick start (one command)
+On first run it downloads ~11 MB of Android tools (scrcpy, which ships adb) from
+their official servers and checks each archive against a pinned SHA-256 before
+using it. Nothing third-party is bundled in the EXE — see
+[THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
 
-Clone, then run the installer from the repo root:
+## Using the phone tab
+
+1. On the phone: Settings → About phone → tap **Build number** seven times, then
+   Developer options → **USB debugging** on.
+2. Plug it in with a **data** cable and tap **Allow** on the "Allow USB
+   debugging?" prompt.
+3. In the browser, open the **Phone** tab and click **Check phone**.
+
+Any authorised device is detected automatically — no serial is configured
+anywhere. If several are plugged in, a picker appears. Unauthorised, offline,
+missing-driver and no-device states each get a specific message telling you what
+to do next.
+
+Two ways to see the screen:
+
+| | Quality | Needs |
+| --- | --- | --- |
+| **Open in scrcpy** | Full frame rate video in its own window | scrcpy (downloaded on first run) |
+| **Start preview** | A few frames per second, in the page | adb only — the dependable fallback |
+
+The in-page preview supports click-to-tap, drag-to-swipe, hardware keys and text
+entry. If you already run your own [ws-scrcpy](https://github.com/NetrisTV/ws-scrcpy)
+on port 8000, an **Embed ws-scrcpy** button appears; pwbridge-tab never installs
+or requires one.
+
+## Start, stop, diagnose
+
+From the Start Menu, or from `tools\pwbridge.cmd`:
+
+| Command | What it does |
+| --- | --- |
+| `pwbridge start` | Start the bridge and open the tab |
+| `pwbridge stop` | Stop the bridge and anything it launched |
+| `pwbridge status` | Is it running, on which port, with which device |
+| `pwbridge doctor` | Check prerequisites and the phone connection |
+| `pwbridge setup -Force` | Re-download and re-verify the Android tools |
+| `pwbridge logs` | Tail the log |
+| `pwbridge diagnostics` | Write a support zip to the Desktop |
+
+The browser page also has **Stop bridge** and **Logs / diagnostics** buttons.
+
+## Run from source
 
 ```powershell
 git clone https://github.com/kfaali2022-web/pwbridge-tab.git
 cd pwbridge-tab
-pwsh -ExecutionPolicy Bypass -File .\install.ps1
+powershell -ExecutionPolicy Bypass -File .\tools\pwbridge.ps1 start
 ```
 
-The installer:
-
-1. Verifies `pwsh` and required files.
-2. Copies files to `%LOCALAPPDATA%\pwbridge-tab`.
-3. Creates a **Start Menu shortcut** ("pwbridge-tab").
-4. Starts the bridge and **opens the tab** at `http://127.0.0.1:8765/`.
-
-In the tab, click **Connect**, then type a command and press **Enter**.
-
-### Options
+Or the server alone, without the launcher:
 
 ```powershell
-# Custom port
-pwsh -File .\install.ps1 -Port 9000
-
-# Require a shared token (recommended)
-pwsh -File .\install.ps1 -Token "my-secret"
-
-# Start automatically at login
-pwsh -File .\install.ps1 -AutoStart
+powershell -ExecutionPolicy Bypass -File .\server\server.ps1 -Port 8765
 ```
 
-When a token is set, enter it in the **Token** field in the tab before clicking Connect.
+`install.ps1` / `uninstall.ps1` remain as the source-tree install path for
+developers; testers should use the EXE.
 
-## Run without installing
+## Building the installer
 
 ```powershell
-pwsh -ExecutionPolicy Bypass -File .\server\server.ps1 -Port 8765
+powershell -ExecutionPolicy Bypass -File installer\build.ps1
 ```
 
-Then open `http://127.0.0.1:8765/`.
-
-## Usage
-
-| Action | How |
-| --- | --- |
-| Run a command | Type in the input box, press Enter |
-| Interrupt | Ctrl+C in the input box |
-| Disconnect | Click Disconnect |
-| Change target | Edit the WS URL field, reconnect |
-
-Example: `Get-Process | Sort-Object CPU -Descending | Select -First 5`
-
-## Uninstall
-
-```powershell
-pwsh -ExecutionPolicy Bypass -File .\uninstall.ps1
-```
-
-Removes the scheduled task, shortcut, and installed files. Your cloned repo is untouched.
+Needs [Inno Setup 6.3+](https://jrsoftware.org/isdl.php). Output lands in
+`dist\`. CI builds the same artifact on every push. See
+[docs/BUILD-RELEASE.md](docs/BUILD-RELEASE.md).
 
 ## Security
 
-pwbridge-tab exposes a **PowerShell shell over a local socket**. Treat it accordingly. Highlights:
+pwbridge-tab exposes **a real shell and adb over a local socket**. Treat it
+accordingly.
 
-- Binds to **loopback only** (`127.0.0.1`); non-loopback binds are refused.
-- Optional shared-token auth via `?token=`.
-- Nothing runs until you click **Connect** and send a command.
+- Binds to **loopback only**; a non-loopback bind is refused outright.
+- A unique 256-bit token is generated per machine on first run and required on
+  every request and on the WebSocket handshake.
+- Cross-origin requests are rejected; the page runs under a strict CSP.
+- Runs as **you**, never elevated. Nothing starts by itself.
+- Every value that reaches an `adb shell` command line is allowlist-validated,
+  not escaped.
+- Diagnostics bundles exclude the token and hash device serials.
 
-Read the full model in [SECURITY.md](SECURITY.md) before exposing this on a shared machine.
+Full model: [SECURITY.md](SECURITY.md).
 
 ## Documentation
 
+- [docs/TESTER-GUIDE.md](docs/TESTER-GUIDE.md) — install and use, assuming nothing
+- [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) — symptoms and fixes
 - [ARCHITECTURE.md](ARCHITECTURE.md) — how the pieces fit together
 - [SECURITY.md](SECURITY.md) — threat model and hardening
+- [docs/BUILD-RELEASE.md](docs/BUILD-RELEASE.md) — building and releasing the EXE
+- [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md) — licences and what is downloaded
 - [ROADMAP.md](ROADMAP.md) — planned features
 
 ## Status
 
-Windows-first **alpha**. Tested manually. Feedback and issues welcome.
+Windows-first **alpha**. Automated validation runs on every push; the phone path
+is manually tested. Feedback and issues welcome.
 
 ## License
 
